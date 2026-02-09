@@ -39,33 +39,63 @@ knitr::opts_chunk$set(
     Email: [ mario.moraes\@unesp.br](mailto: mario.moraes@unesp.br)
     
 
-### Pré-processameto
+### Carregando Pacotes
 
 ```{r}
 library(tidyverse)
+library(spdep)
+library(gstat)
+library(sf)
+library(sp)
 source("R/my-functions.R")
+```
+
+
+### Carregando os banco de dados
+
+```{r}
 lsgo<-readxl::read_xlsx("data-raw/GO-LAG-Pop-Sucupira1.xlsx") |> 
   janitor::clean_names()
 selms<-readxl::read_xlsx("data-raw/MS-SEL-Pop-Sucupira1.xlsx") |> 
   janitor::clean_names()
 aposp<-readxl::read_xlsx("data-raw/SP-APO-Pop-Sucupira1.xlsx") |> 
   janitor::clean_names()
-glimpse(aposp)
-data_set <- rbind(lsgo,selms,aposp)
+
+# alteração do sistema de coordenadas
+data_set <- rbind(lsgo,selms,aposp) |> 
+  # st_as_sf(coords = c("easting", "northing"),
+  #          crs = 31983) %>%      # CRS de origem
+  # st_transform(crs = 4326) %>%   # WGS84 (lat/long)
+  mutate(
+    longitude = easting,
+    latitude = northing
+    # longitude = st_coordinates(.)[,1],
+    # latitude  = st_coordinates(.)[,2]
+  ) #%>%
+  # st_drop_geometry()
 ```
 
 ### Grid amostral e Gráficos
 
+
+Os gráficos X–Y com gradiente de cor foram utilizados para representar a
+distribuição espacial das variáveis dentro de cada população, por padrão utilizamos 3 classes por população, em que a tonalidade indica a magnitude dos valores observados. Essa abordagem permite identificar visualmente gradientes espaciais, manchas e possíveis padrões de agregação ou heterogeneidade intra-populacional.
+
+Os boxplots foram empregados para comparar a distribuição das variáveis entre populações, evidenciando diferenças de mediana, dispersão e presença de valores extremos. 
+
+Em conjunto, essas visualizações auxiliam na interpretação dos resultados de correlação e autocorrelação espacial, bem como na identificação de padrões relevantes para análises estatísticas subsequentes.
+
+
 ```{r}
 names_vari <- names(data_set |> select(hc_m:s_enxofre))
-map(names_vari,~{
+walk(names_vari,~{
   plot_map <- data_set |>
-    select(populacao,northing,easting,!!sym(.x)) |>
+    select(populacao,longitude,latitude,!!sym(.x)) |>
     group_by(populacao) |>
     mutate(
       classe = cut(!!sym(.x),3)
     ) |>
-    ggplot(aes(x=easting, y=northing,colour = classe)) +
+    ggplot(aes(x=longitude, y=latitude,colour = classe)) +
     geom_point() +
     facet_wrap(~populacao,scale="free",ncol=2)+
     theme_bw()+
@@ -74,7 +104,7 @@ map(names_vari,~{
     )
   
     plot_box <- data_set |> 
-    select(populacao,northing,easting,!!sym(.x)) |> 
+    select(populacao,longitude,latitude,!!sym(.x)) |> 
     group_by(populacao) |> 
     ggplot(aes(y=!!sym(.x), fill = populacao)) +
     geom_boxplot() +
@@ -91,11 +121,16 @@ map(names_vari,~{
 
 ### Estatística Descritiva
 
+A estatística descritiva foi utilizada para caracterizar a distribuição das variáveis analisadas em cada população, incluindo medidas de posição e dispersão, bem como os coeficientes de assimetria e curtose.
+
+O coeficiente de assimetria permite avaliar desvios em relação à simetria da distribuição, indicando predominância de valores mais altos ou mais baixos. A curtose descreve o grau de concentração dos dados em torno da média, auxiliando na identificação de distribuições mais achatadas ou mais concentradas.
+
+
 ```{r}
 data_set |> 
   select(populacao, hc_m:s_enxofre) |> 
   group_by(populacao) |> 
-  summarise( across(
+  reframe( across(
     .cols = hc_m:s_enxofre,
     .fns = estat_desc,
     .names = "{.col}"
@@ -104,6 +139,213 @@ data_set |>
   add_column(estat = rep(estat_names,3)) |> 
   relocate(estat) |> 
   writexl::write_xlsx("output/estatistica-descritiva.xlsx")
+```
+
+
+### Correlação linear por população
+
+A análise de correlação linear foi realizada separadamente para cada população, com o objetivo de avaliar as relações entre as variáveis dentro de um mesmo contexto ambiental e espacial, evitando efeitos de confusão associados às diferenças entre localidades.
+
+As matrizes de correlação foram visualizadas por meio de corrplot, permitindo identificar a direção (positiva ou negativa) e a intensidade das correlações entre variáveis, bem como padrões consistentes ou contrastantes entre as populações analisadas.
+
+Ideal para interpretação  das relações planta–solo em nível intra-populacional.
+
+```{r}
+data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  select(hc_m:s_enxofre) |> 
+  cor(use = "complete.obs") |> 
+  corrplot::corrplot( method = "color",
+         outline = T,,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+         diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8)
+```
+### Correlação linear - por população
+```{r}
+data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  select(hc_m:s_enxofre) |> 
+  cor(use = "complete.obs") |> 
+  corrplot::corrplot( method = "color",
+         outline = T,,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+         diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8)
+```
+### Correlação linear
+```{r}
+data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  select(hc_m:s_enxofre) |> 
+  cor(use = "complete.obs") |> 
+  corrplot::corrplot( method = "color",
+         outline = T,,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1, type = "upper", bg="azure2",
+         diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8)
+```
+
+### Autocorrelação espacial (Moran’s I)
+
+O Índice de Moran é uma medida de autocorrelação espacial global que avalia  se valores de uma variável observados em pontos próximos no espaço tendem  a ser mais semelhantes (autocorrelação positiva), mais diferentes (autocorrelação negativa) ou distribuídos aleatoriamente.
+
+**Valores de Moran’s I próximos ao valor esperado sob aleatoriedade indicam ausência de estrutura espacial. Valores significativamente maiores que o esperado indicam autocorrelação espacial positiva (agregação), enquanto  valores menores indicam autocorrelação negativa (repulsão).**
+
+A significância estatística é avaliada por teste de randomização. Um p-valor baixo (ex.: p < 0,05) indica que o padrão espacial observado difere do acaso, na escala definida pela matriz de vizinhança utilizada.
+
+```{r}
+coords <- data_set  |> 
+  filter(populacao == "Lagoa Santa/GO")  |>  
+  select(longitude, latitude)
+
+nb <- dnearneigh(as.matrix(coords), 5, 300)  # ajuste distância
+lw <- nb2listw(nb, style = "W")
+
+walk(names_vari, ~{
+  x <- data_set |> filter(populacao == "Lagoa Santa/GO")|> pull(!!sym(.x))
+  x[is.na(x)] <- mean(x,na.rm=TRUE) 
+  print(paste0("|---------- ",.x," ---------|"))
+  print(moran.test(x, lw))
   
+})
+```
+
+```{r}
+coords <- data_set  |> 
+  filter(populacao == "Selvíria/MS")  |>  
+  select(longitude, latitude)
+
+nb <- dnearneigh(as.matrix(coords), 5, 500)  # ajuste distância
+lw <- nb2listw(nb, style = "W")
+
+walk(names_vari, ~{
+  x <- data_set |> filter(populacao == "Selvíria/MS")|> pull(!!sym(.x))
+  x[is.na(x)] <- mean(x,na.rm=TRUE) 
+  print(paste0("|---------- ",.x," ---------|"))
+  print(moran.test(x, lw))
+  
+})
+```
+
+```{r}
+coords <- data_set  |> 
+  filter(populacao == "Aparecida D'Oeste/SP")  |>  
+  select(longitude, latitude)
+
+nb <- dnearneigh(as.matrix(coords), 5, 5100)  # ajuste distância
+lw <- nb2listw(nb, style = "W")
+
+walk(names_vari, ~{
+  x <- data_set |> filter(populacao == "Aparecida D'Oeste/SP")|> pull(!!sym(.x))
+  x[is.na(x)] <- mean(x,na.rm=TRUE) 
+  print(paste0("|---------- ",.x," ---------|"))
+  print(moran.test(x, lw))
+  
+})
+```
+
+### Modelagem geoestatística - Dependência Espacial
+#### Listando Populações
+```{r}
+data_set$populacao |> unique()
+```
+
+#### Listando Variáveis
+```{r}
+data_set |> select(hc_m:s_enxofre) |> names()
+```
+
+#### Filtrando o banco de dados para análise variográfica
+```{r}
+pop <- "Selvíria/MS"
+variavel <- "dmc_m"
+data_set_aux <- data_set |> 
+  filter(
+    populacao == pop) |> 
+  select(longitude,latitude,variavel) |> 
+  rename(x=longitude, y=latitude, z = !!sym(variavel)) |> 
+  group_by(x,y) # |> mutate(z = log(z+1)) ## TRANSFORMAR SE NECESSÁRIO
+glimpse(data_set_aux)
+```
+
+#### Criando objeto tipo sp e fórmula para análise 
+```{r}
+coordinates(data_set_aux) = ~ x + y  
+form <- z ~ 1
+```
+
+#### Construção do Semivariograma Experimental
+```{r}
+vari_exp <- variogram(form, data = data_set_aux,
+                      cressie = FALSE,
+                      cutoff = 200, # distância máxima do semivariograma
+                      width = 15) # distância entre pontos
+vari_exp  |>  
+ ggplot(aes(x=dist, y=gamma)) +
+ geom_point() +
+ labs(x="lag (m)",
+      y=expression(paste(gamma,"(h)")))
+```
+
+#### Ajustando modelos
+
+```{r}
+patamar=10
+alcance=40
+epepita=1
+modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+plot_my_models(modelo_1,modelo_2,modelo_3)
+```
+
+#### Escolha o melhor modelo (>r²)
+```{r}
+modelo <- modelo_2
+```
+
+#### Salvando os parâmetros ajustados
+```{r}
+model <- modelo |> slice(2) |> pull(model)
+rss <- round(attr(modelo, "SSErr"),4)
+c0 <- round(modelo$psill[[1]],4)
+c0_c1 <- round(sum(modelo$psill),4)
+a <- ifelse(model == "Gau", round(modelo$range[[2]]*(3^.5),2),
+            ifelse(model == "Exp",round(3*modelo$range[[2]],2),
+            round(modelo$range[[2]],2)))
+r2 <- vari_exp |> add_column( model = model, a=a, c0 = c0,
+                                  c0_c1 = c0_c1) |>
+    mutate(
+      gamma_m = ifelse(model == "Sph",
+        ifelse(dist <= a, c0 + (c0_c1 - c0) * (3/2 * (dist/a) - 1/2 * (dist/a)^3),c0_c1), ifelse(model == "Exp", c0 + (c0_c1-c0)*(1-exp(-3*(dist/a))),c0 + (c0_c1-c0)*(1-exp(-(dist/a)^2)))),
+      residuo_total = (gamma-mean(gamma))^2,
+      residuo_mod = (gamma - gamma_m)^2
+    ) |>
+    summarise(
+      r2=(sum(residuo_total) - sum(residuo_mod))/sum(residuo_total)
+    ) |> pull(r2)
+
+tibble(
+  pop, variavel, model, c0, c0_c1, a, rss, r2
+) |> mutate(gde = c0/c0_c1, .after = "a") |>
+  write_csv(paste0("output/best-fit/",str_replace_all(pop,"/| ","_"),"-",variavel,".csv"))
+
+ls_csv <- list.files("output/best-fit/",full.names = TRUE,pattern = ".csv")
+map_df(ls_csv, read_csv) |>
+  arrange(pop,variavel) |> 
+  writexl::write_xlsx("output/semivariogram-model.xlsx")
 ```
 
