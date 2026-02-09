@@ -1,0 +1,109 @@
+---
+title: "Projeto Sucupira / Análise de Dados"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  error = FALSE,
+  comment = "#>"
+)
+```
+
+## 👨‍🔬 Autores
+
+-   **Regivam Antonio de Saul**\
+    Graduando em Agronomia - FEIS/Unesp\
+    Email: [regivan.saul\@unesp.br](mailto:regivan.saul@unesp.br)
+
+-   **Witória de Oliveira Araujo**\
+    Pós-graduando em Agronomia - FCAV/Unesp\
+    Email: [witoria.araujo\@unesp.br](mailto:witoria.araujo@unesp.br)
+    
+-   **Rodrigo Baratiere Perim**\
+    Pós-graduando em Agronomia - FCAV/Unesp\
+    Email: [rodrigo.perim\@unesp.br](mailto:rodrigo.perim@unesp.br)
+
+-   **Prof. Dr. Alan Rodrigo Panosso**\
+    Coorientador — Departamento de Ciências Exatas - FCAV/Unesp\
+    Email: [alan.panosso\@unesp.br](mailto:alan.panosso@unesp.br)
+    
+-   **Prof. Dr. Mario Luiz Teixeira de Moraes**\
+    Coorientador — Departamento de Fitotecnia, Tecnologia de Alimentos e Sócio-Economia - FEIS/Unesp\
+    Email: [ mario.moraes\@unesp.br](mailto: mario.moraes@unesp.br)
+    
+
+### Pré-processameto
+
+```{r}
+library(tidyverse)
+source("R/my-functions.R")
+lsgo<-readxl::read_xlsx("data-raw/GO-LAG-Pop-Sucupira1.xlsx") |> 
+  janitor::clean_names()
+selms<-readxl::read_xlsx("data-raw/MS-SEL-Pop-Sucupira1.xlsx") |> 
+  janitor::clean_names()
+aposp<-readxl::read_xlsx("data-raw/SP-APO-Pop-Sucupira1.xlsx") |> 
+  janitor::clean_names()
+glimpse(aposp)
+data_set <- rbind(lsgo,selms,aposp)
+```
+
+### Grid amostral e Gráficos
+
+```{r}
+names_vari <- names(data_set |> select(hc_m:s_enxofre))
+map(names_vari,~{
+  plot_map <- data_set |>
+    select(populacao,northing,easting,!!sym(.x)) |>
+    group_by(populacao) |>
+    mutate(
+      classe = cut(!!sym(.x),3)
+    ) |>
+    ggplot(aes(x=easting, y=northing,colour = classe)) +
+    geom_point() +
+    facet_wrap(~populacao,scale="free",ncol=2)+
+    theme_bw()+
+    labs(
+      colour = .x
+    )
+  
+    plot_box <- data_set |> 
+    select(populacao,northing,easting,!!sym(.x)) |> 
+    group_by(populacao) |> 
+    ggplot(aes(y=!!sym(.x), fill = populacao)) +
+    geom_boxplot() +
+    theme_bw()+
+    labs(
+      fill = "populacao"
+    ) + scale_fill_viridis_d(option = "B")
+    
+    print(plot_map)
+    print(plot_box)
+})
+
+```
+
+### Estatística Descritiva
+
+```{r}
+data_set |> 
+  select(populacao, hc_m:s_enxofre) |> 
+  group_by(populacao) |> 
+  summarise( across(
+    .cols = hc_m:s_enxofre,
+    .fns = estat_desc,
+    .names = "{.col}"
+  )) |>
+  ungroup() |> 
+  add_column(estat = rep(estat_names,3)) |> 
+  relocate(estat) |> 
+  writexl::write_xlsx("output/estatistica-descritiva.xlsx")
+  
+```
+
