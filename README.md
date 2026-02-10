@@ -1,6 +1,6 @@
 Projeto Sucupira / Análise de Dados
 ================
-2026-02-09
+2026-02-10
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
@@ -1819,4 +1819,466 @@ bi_plot
 #> ca_calcio    -0.033475324
 #> p_h          -0.018629376
 #> mg_magnesio  -0.007516970
+```
+
+### Análise de Redundância (RDA) - Lagoa Santa/GO
+
+A Análise de Redundância (RDA) é um método de ordenação canônica que
+combina regressão múltipla e análise de componentes principais,
+permitindo avaliar a proporção da variabilidade das variáveis da planta
+explicada pelos atributos do solo.
+
+``` r
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Lagoa Santa/GO") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+form_rda <- as.formula(
+  paste("scale(da_pad_planta) ~",
+        paste(names(da_pad_solo), collapse = " + "))
+)
+
+# Modelo Completo
+rda_GO <- rda(form_rda,
+              da_pad)
+
+# Correlação entre solo
+cor(da_pad_solo, use = "complete.obs") #|r| > 0.7 → não entram juntas
+#>              mat_organica        p_h    p_h_smp  p_fosforo  k_potacio
+#> mat_organica   1.00000000 -0.2741123  0.1873028 -0.2370836 -0.1827872
+#> p_h           -0.27411226  1.0000000  0.4740552  0.3029287  0.6687919
+#> p_h_smp        0.18730282  0.4740552  1.0000000  0.2203569  0.5067828
+#> p_fosforo     -0.23708359  0.3029287  0.2203569  1.0000000  0.5425596
+#> k_potacio     -0.18278719  0.6687919  0.5067828  0.5425596  1.0000000
+#> ca_calcio     -0.48933734  0.6329082  0.3095196  0.5842945  0.7442333
+#> mg_magnesio   -0.36118211  0.7920935  0.3983234  0.4830007  0.7484484
+#> al_aluminio    0.08495813 -0.6661925 -0.5668446 -0.2778595 -0.5290026
+#> s_enxofre      0.27996967 -0.1267618 -0.2145912 -0.3273393 -0.3196130
+#>               ca_calcio mg_magnesio al_aluminio  s_enxofre
+#> mat_organica -0.4893373  -0.3611821  0.08495813  0.2799697
+#> p_h           0.6329082   0.7920935 -0.66619250 -0.1267618
+#> p_h_smp       0.3095196   0.3983234 -0.56684458 -0.2145912
+#> p_fosforo     0.5842945   0.4830007 -0.27785947 -0.3273393
+#> k_potacio     0.7442333   0.7484484 -0.52900260 -0.3196130
+#> ca_calcio     1.0000000   0.8288475 -0.52847154 -0.2691153
+#> mg_magnesio   0.8288475   1.0000000 -0.67842664 -0.1663193
+#> al_aluminio  -0.5284715  -0.6784266  1.00000000  0.1219868
+#> s_enxofre    -0.2691153  -0.1663193  0.12198683  1.0000000
+cor(da_pad_solo, use = "complete.obs") |> 
+  corrplot()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-47-1.png)<!-- -->
+
+``` r
+
+# Olhando a Multicolinearidade pelo VIF
+vif.cca(rda_GO) #VIF > 10 → remove
+#> mat_organica          p_h      p_h_smp    p_fosforo    k_potacio    ca_calcio 
+#>     1.897377     3.350243     1.993960     1.704707     3.597656     4.907596 
+#>  mg_magnesio  al_aluminio    s_enxofre 
+#>     5.983799     2.470169     1.355552
+
+# Não foi necessário remover
+# Modelo final
+rda_GO
+#> Call: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp +
+#> p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre,
+#> data = da_pad)
+#> 
+#> -- Model Summary --
+#> 
+#>               Inertia Proportion Rank
+#> Total          6.0000     1.0000     
+#> Constrained    1.2047     0.2008    6
+#> Unconstrained  4.7953     0.7992    6
+#> 
+#> Inertia is variance
+#> 
+#> -- Eigenvalues --
+#> 
+#> Eigenvalues for constrained axes:
+#>   RDA1   RDA2   RDA3   RDA4   RDA5   RDA6 
+#> 0.5572 0.4288 0.0941 0.0857 0.0343 0.0045 
+#> 
+#> Eigenvalues for unconstrained axes:
+#>    PC1    PC2    PC3    PC4    PC5    PC6 
+#> 1.5194 1.0082 0.7805 0.6956 0.5546 0.2370
+
+#9 variáveis de solo explicaram as variáveis da planta.
+# O conjunto de atributos do solo explica ≈ 20% da variação total das características da planta. Constrained = 1.2047  → 20.08% e Unconstrained = 4.7953 → 79.92% o solo, como conjunto, tem papel relevante na estruturação da variação da planta.
+
+# Eixos canônicos (RDA 1 e 2)  0.5572 + 0.4288 ≈ 82% da variação explicada pelo solo 
+
+#A Análise de Redundância indicou que o conjunto de atributos químicos do solo explicou 20,1% da variabilidade total das características da planta. Os dois primeiros eixos canônicos concentraram aproximadamente 82% da variação explicada, indicando que os principais gradientes ambientais associados ao solo estão representados nesses eixos.
+
+
+anova(rda_GO)            # modelo global - 
+#> Permutation test for rda under reduced model
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>          Df Variance      F Pr(>F)
+#> Model     9   1.2047 1.2282  0.168
+#> Residual 44   4.7953
+# essa explicação não é maior do que o esperado ao acaso
+# há tendência / efeito moderado, mas sem significância global
+
+anova(rda_GO, by="term") # cada variável do solo
+#> Permutation test for rda under reduced model
+#> Terms added sequentially (first to last)
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>              Df Variance      F Pr(>F)   
+#> mat_organica  1   0.0614 0.5632  0.721   
+#> p_h           1   0.0194 0.1777  0.980   
+#> p_h_smp       1   0.3423 3.1409  0.005 **
+#> p_fosforo     1   0.2163 1.9851  0.063 . 
+#> k_potacio     1   0.1278 1.1724  0.338   
+#> ca_calcio     1   0.0509 0.4669  0.815   
+#> mg_magnesio   1   0.0922 0.8455  0.521   
+#> al_aluminio   1   0.1899 1.7426  0.110   
+#> s_enxofre     1   0.1046 0.9596  0.408   
+#> Residual     44   4.7953                 
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# apenas o pH SMP apresentou efeito estatisticamente significativo sobre a variação multivariada dos atributos das plantas (F = 3,14; p = 0,009)
+
+# O fósforo apresentou efeito marginal (p = 0,078), sugerindo possível influência secundária, porém insuficiente para explicar de forma independente a estrutura dos dados. As demais variáveis do solo  não contribuíram significativamente para o modelo quando consideradas conjuntamente.
+
+# a resposta multivariada das plantas está associada principalmente ao gradiente de acidez potencial do solo
+
+anova(rda_GO, by="axis") # eixos
+#> Permutation test for rda under reduced model
+#> Forward tests for axes
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>          Df Variance      F Pr(>F)
+#> RDA1      1   0.5572 5.4614  0.188
+#> RDA2      1   0.4288 4.2031  0.351
+#> RDA3      1   0.0941 0.9222  1.000
+#> RDA4      1   0.0857 0.8404       
+#> RDA5      1   0.0343 0.3362       
+#> RDA6      1   0.0045 0.0444       
+#> Residual 47   4.7953
+
+# O teste de permutação aplicado aos eixos canônicos da RDA indica que nenhum dos eixos (RDA1–RDA6) é estatisticamente significativo (p > 0.05), apesar de os dois primeiros eixos apresentarem valores relativamente mais altos de variância explicada.
+
+# Isso significa que, quando todas as variáveis do solo são incluídas simultaneamente no modelo, a estrutura multivariada dos dados das plantas não é bem representada por eixos canônicos individuais
+```
+
+### Análise de Redundância (RDA) - Selvíria/MS
+
+``` r
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Selvíria/MS") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+form_rda <- as.formula(
+  paste("scale(da_pad_planta) ~",
+        paste(names(da_pad_solo), collapse = " + "))
+)
+
+# Modelo Completo
+rda_MS <- rda(form_rda,
+              da_pad)
+
+# Correlação entre solo
+cor(da_pad_solo, use = "complete.obs") #|r| > 0.7 → não entram juntas
+#>              mat_organica        p_h    p_h_smp    p_fosforo    k_potacio
+#> mat_organica    1.0000000 -0.4594077 -0.1506884 -0.259214764 -0.726102879
+#> p_h            -0.4594077  1.0000000  0.3284700 -0.209860847  0.629505482
+#> p_h_smp        -0.1506884  0.3284700  1.0000000 -0.239191060  0.493075141
+#> p_fosforo      -0.2592148 -0.2098608 -0.2391911  1.000000000  0.003705889
+#> k_potacio      -0.7261029  0.6295055  0.4930751  0.003705889  1.000000000
+#> ca_calcio      -0.7736735  0.6506286  0.3801273  0.057410848  0.838387979
+#> mg_magnesio    -0.6577408  0.6784769  0.4407070  0.015978791  0.853447381
+#> al_aluminio     0.3189071 -0.4793893 -0.5494431  0.251970035 -0.442912657
+#> s_enxofre       0.5771967 -0.3307715 -0.3665436  0.002283157 -0.655184764
+#>                ca_calcio mg_magnesio al_aluminio    s_enxofre
+#> mat_organica -0.77367353 -0.65774081   0.3189071  0.577196682
+#> p_h           0.65062858  0.67847687  -0.4793893 -0.330771454
+#> p_h_smp       0.38012727  0.44070700  -0.5494431 -0.366543601
+#> p_fosforo     0.05741085  0.01597879   0.2519700  0.002283157
+#> k_potacio     0.83838798  0.85344738  -0.4429127 -0.655184764
+#> ca_calcio     1.00000000  0.88251131  -0.6379842 -0.623490424
+#> mg_magnesio   0.88251131  1.00000000  -0.6550394 -0.493558804
+#> al_aluminio  -0.63798424 -0.65503937   1.0000000  0.284993730
+#> s_enxofre    -0.62349042 -0.49355880   0.2849937  1.000000000
+cor(da_pad_solo, use = "complete.obs") |> 
+  corrplot()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-48-1.png)<!-- -->
+
+``` r
+
+# Olhando a Multicolinearidade pelo VIF
+vif.cca(rda_MS) #VIF > 10 → remove
+#> mat_organica          p_h      p_h_smp    p_fosforo    k_potacio    ca_calcio 
+#>     3.476261     2.187351     2.138698     1.504848     8.111156     9.027499 
+#>  mg_magnesio  al_aluminio    s_enxofre 
+#>     8.050087     3.522434     2.183733
+
+# Não foi necessário remover
+# Modelo final
+rda_MS
+#> Call: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp +
+#> p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre,
+#> data = da_pad)
+#> 
+#> -- Model Summary --
+#> 
+#>               Inertia Proportion Rank
+#> Total          6.0000     1.0000     
+#> Constrained    1.2992     0.2165    6
+#> Unconstrained  4.7008     0.7835    6
+#> 
+#> Inertia is variance
+#> 
+#> -- Eigenvalues --
+#> 
+#> Eigenvalues for constrained axes:
+#>   RDA1   RDA2   RDA3   RDA4   RDA5   RDA6 
+#> 0.5693 0.2755 0.2336 0.1273 0.0837 0.0098 
+#> 
+#> Eigenvalues for unconstrained axes:
+#>    PC1    PC2    PC3    PC4    PC5    PC6 
+#> 1.4119 1.0343 0.8191 0.7630 0.4995 0.1730
+
+# 9 variáveis de solo explicaram as variáveis da planta.
+# O conjunto de atributos do solo explica ≈ 22% da variação total das características da planta. Inércia não constrangida: 78,35% o conjunto de variáveis do solo explica pouco da estrutura multivariada das plantas.
+
+# Eixos canônicos (RDA 1 e 2)  0.5693 + 0.2755 ≈ 84% da variação explicada pelo solo 
+
+#A Análise de Redundância indicou que o conjunto de atributos químicos do solo explicou 22% da variabilidade total das características da planta. Os dois primeiros eixos canônicos concentraram aproximadamente 84% da variação explicada, indicando que os principais gradientes ambientais associados ao solo estão representados nesses eixos.
+
+
+anova(rda_MS)            # modelo global - 
+#> Permutation test for rda under reduced model
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>          Df Variance      F Pr(>F)
+#> Model     9   1.2992 0.9213    0.6
+#> Residual 30   4.7008
+# essa explicação não é maior do que o esperado ao acaso
+# há tendência / efeito moderado, mas sem significância global. A estrutura dos dados sugere que outros fatores (espaciais, genéticos, microambiente, histórico de manejo) são mais importantes do que os atributos químicos do solo.
+
+anova(rda_MS, by="term") # cada variável do solo
+#> Permutation test for rda under reduced model
+#> Terms added sequentially (first to last)
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>              Df Variance      F Pr(>F)  
+#> mat_organica  1   0.0268 0.1710  0.983  
+#> p_h           1   0.2400 1.5314  0.200  
+#> p_h_smp       1   0.1288 0.8219  0.539  
+#> p_fosforo     1   0.0997 0.6365  0.671  
+#> k_potacio     1   0.3321 2.1195  0.057 .
+#> ca_calcio     1   0.1099 0.7015  0.619  
+#> mg_magnesio   1   0.1446 0.9229  0.468  
+#> al_aluminio   1   0.0458 0.2924  0.932  
+#> s_enxofre     1   0.1715 1.0942  0.360  
+#> Residual     30   4.7008                
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# k_potacio é a única com tendência marginal.
+
+# A análise sequencial dos termos da RDA indicou que nenhuma variável do solo apresentou efeito significativo sobre a variação dos atributos das plantas (p > 0,05), embora o teor de potássio tenha apresentado efeito marginal (F = 2,12; p = 0,065). Os resultados sugerem que não há um único fator edáfico dominante estruturando a variação das plantas nesta localidade, com apenas uma influência fraca e não significativa do potássio.
+
+anova(rda_MS, by="axis") # eixos
+#> Permutation test for rda under reduced model
+#> Forward tests for axes
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>          Df Variance      F Pr(>F)
+#> RDA1      1   0.5693 3.9963  0.585
+#> RDA2      1   0.2755 1.9338  0.988
+#> RDA3      1   0.2336 1.6397  0.990
+#> RDA4      1   0.1273 0.8939  1.000
+#> RDA5      1   0.0837 0.5877       
+#> RDA6      1   0.0098 0.0691       
+#> Residual 33   4.7008
+
+# O teste de permutação aplicado aos eixos canônicos da RDA indica que nenhum dos eixos (RDA1–RDA6) é estatisticamente significativo (p > 0.05), apesar de os dois primeiros eixos apresentarem valores relativamente mais altos de variância explicada.
+
+# Não há evidência de que as variáveis edáficas expliquem de forma consistente a variação multivariada dos atributos das plantas nesta localidade.
+```
+
+### Análise de Redundância (RDA) - Aparecida D’Oeste/SP
+
+``` r
+da_pad<-decostand(data_set |> 
+              filter(populacao == "Aparecida D'Oeste/SP") |> 
+              select(hc_m:s_enxofre) |> 
+              mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+form_rda <- as.formula(
+  paste("scale(da_pad_planta) ~",
+        paste(names(da_pad_solo), collapse = " + "))
+)
+
+# Modelo Completo
+rda_SP <- rda(form_rda,
+              da_pad)
+
+# Correlação entre solo
+cor(da_pad_solo, use = "complete.obs") #|r| > 0.7 → não entram juntas
+#>              mat_organica          p_h      p_h_smp    p_fosforo   k_potacio
+#> mat_organica  1.000000000  0.009670605  0.329100401 -0.034181850 -0.46938181
+#> p_h           0.009670605  1.000000000  0.810192254 -0.017837537  0.27446930
+#> p_h_smp       0.329100401  0.810192254  1.000000000  0.006849213  0.08990715
+#> p_fosforo    -0.034181850 -0.017837537  0.006849213  1.000000000 -0.09099024
+#> k_potacio    -0.469381808  0.274469301  0.089907150 -0.090990237  1.00000000
+#> ca_calcio    -0.422815449  0.695053936  0.437130174  0.156545793  0.32007542
+#> mg_magnesio  -0.390686460  0.661004300  0.489152706  0.073971365  0.43618123
+#> al_aluminio   0.050875606 -0.756492057 -0.810452162 -0.115494981 -0.34207478
+#> s_enxofre     0.188669028 -0.096023650  0.103069066  0.277542994 -0.36533912
+#>               ca_calcio mg_magnesio al_aluminio   s_enxofre
+#> mat_organica -0.4228154 -0.39068646  0.05087561  0.18866903
+#> p_h           0.6950539  0.66100430 -0.75649206 -0.09602365
+#> p_h_smp       0.4371302  0.48915271 -0.81045216  0.10306907
+#> p_fosforo     0.1565458  0.07397136 -0.11549498  0.27754299
+#> k_potacio     0.3200754  0.43618123 -0.34207478 -0.36533912
+#> ca_calcio     1.0000000  0.87115644 -0.53257902 -0.21541501
+#> mg_magnesio   0.8711564  1.00000000 -0.60680789 -0.21625247
+#> al_aluminio  -0.5325790 -0.60680789  1.00000000 -0.15262757
+#> s_enxofre    -0.2154150 -0.21625247 -0.15262757  1.00000000
+cor(da_pad_solo, use = "complete.obs") |> 
+  corrplot()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
+
+``` r
+
+# Olhando a Multicolinearidade pelo VIF
+vif.cca(rda_SP) #VIF > 10 → remove
+#> mat_organica          p_h      p_h_smp    p_fosforo    k_potacio    ca_calcio 
+#>     3.117696     5.617234     8.220561     1.264645     1.991763     6.784262 
+#>  mg_magnesio  al_aluminio    s_enxofre 
+#>     5.409560     5.634397     1.630697
+
+# Não foi necessário remover
+# Modelo final
+rda_SP
+#> Call: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp +
+#> p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre,
+#> data = da_pad)
+#> 
+#> -- Model Summary --
+#> 
+#>               Inertia Proportion Rank
+#> Total          6.0000     1.0000     
+#> Constrained    1.4604     0.2434    6
+#> Unconstrained  4.5396     0.7566    6
+#> 
+#> Inertia is variance
+#> 
+#> -- Eigenvalues --
+#> 
+#> Eigenvalues for constrained axes:
+#>   RDA1   RDA2   RDA3   RDA4   RDA5   RDA6 
+#> 0.6804 0.4517 0.1377 0.0980 0.0618 0.0309 
+#> 
+#> Eigenvalues for unconstrained axes:
+#>    PC1    PC2    PC3    PC4    PC5    PC6 
+#> 1.2637 1.0496 0.9136 0.5872 0.3981 0.3274
+
+# 9 variáveis de solo explicaram as variáveis da planta.
+# O conjunto de atributos do solo explica ≈ 24% da variação total das características da planta. Inércia não constrangida: 75,66% o conjunto de variáveis do solo explica pouco da estrutura multivariada das plantas.
+
+# Eixos canônicos (RDA 1 e 2)   ≈ 77.5% da variação explicada pelo solo 
+
+#A Análise de Redundância indicou que o conjunto de atributos químicos do solo explicou 24% da variabilidade total das características da planta. Os dois primeiros eixos canônicos concentraram aproximadamente 77% da variação explicada, indicando que os principais gradientes ambientais associados ao solo estão representados nesses eixos.
+
+
+anova(rda_SP)            # modelo global - 
+#> Permutation test for rda under reduced model
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>          Df Variance      F Pr(>F)
+#> Model     9   1.4604 1.0723  0.381
+#> Residual 30   4.5396
+# essa explicação não é maior do que o esperado ao acaso
+# há tendência / efeito moderado, mas sem significância global. A estrutura dos dados sugere que outros fatores (espaciais, genéticos, microambiente, histórico de manejo) são mais importantes do que os atributos químicos do solo.
+
+anova(rda_SP, by="term") # cada variável do solo
+#> Permutation test for rda under reduced model
+#> Terms added sequentially (first to last)
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>              Df Variance      F Pr(>F)  
+#> mat_organica  1   0.0979 0.6471  0.661  
+#> p_h           1   0.0699 0.4618  0.823  
+#> p_h_smp       1   0.1020 0.6739  0.667  
+#> p_fosforo     1   0.2207 1.4585  0.174  
+#> k_potacio     1   0.1681 1.1107  0.372  
+#> ca_calcio     1   0.3570 2.3591  0.030 *
+#> mg_magnesio   1   0.0671 0.4432  0.826  
+#> al_aluminio   1   0.1266 0.8367  0.539  
+#> s_enxofre     1   0.2512 1.6600  0.141  
+#> Residual     30   4.5396                
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# A variação multivariada dos atributos das plantas está associada principalmente ao gradiente de cálcio no solo.
+
+# A análise de redundância indicou que, entre as variáveis edáficas avaliadas, apenas o teor de cálcio apresentou efeito significativo sobre a variação multivariada dos atributos das plantas (p = 0,023). As demais variáveis não contribuíram significativamente para o modelo.
+
+anova(rda_SP, by="axis") # eixos
+#> Permutation test for rda under reduced model
+#> Forward tests for axes
+#> Permutation: free
+#> Number of permutations: 999
+#> 
+#> Model: rda(formula = scale(da_pad_planta) ~ mat_organica + p_h + p_h_smp + p_fosforo + k_potacio + ca_calcio + mg_magnesio + al_aluminio + s_enxofre, data = da_pad)
+#>          Df Variance      F Pr(>F)
+#> RDA1      1   0.6804 4.9463  0.234
+#> RDA2      1   0.4517 3.2832  0.665
+#> RDA3      1   0.1377 1.0006  1.000
+#> RDA4      1   0.0980 0.7122       
+#> RDA5      1   0.0618 0.4489       
+#> RDA6      1   0.0309 0.2248       
+#> Residual 33   4.5396
+
+# O teste de permutação aplicado aos eixos canônicos da RDA indica que nenhum dos eixos (RDA1–RDA6) é estatisticamente significativo (p > 0.05), apesar de os dois primeiros eixos apresentarem valores relativamente mais altos de variância explicada.
+
+# Não há evidência de que as variáveis edáficas expliquem de forma consistente a variação multivariada dos atributos das plantas nesta localidade.
+
+# o efeito do Ca existe, mas está disperso entre mais de um eixo e não forte o suficiente para tornar um eixo individualmente significativo.
 ```

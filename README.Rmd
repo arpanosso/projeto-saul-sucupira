@@ -1004,3 +1004,190 @@ bi_plot
 
 ```
 
+### Análise de Redundância (RDA) - Lagoa Santa/GO
+
+A Análise de Redundância (RDA) é um método de ordenação canônica que combina regressão múltipla e análise de componentes principais, permitindo avaliar a proporção da variabilidade das variáveis da planta explicada pelos atributos do solo.
+
+```{r}
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Lagoa Santa/GO") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+form_rda <- as.formula(
+  paste("scale(da_pad_planta) ~",
+        paste(names(da_pad_solo), collapse = " + "))
+)
+
+# Modelo Completo
+rda_GO <- rda(form_rda,
+              da_pad)
+
+# Correlação entre solo
+cor(da_pad_solo, use = "complete.obs") #|r| > 0.7 → não entram juntas
+cor(da_pad_solo, use = "complete.obs") |> 
+  corrplot()
+
+# Olhando a Multicolinearidade pelo VIF
+vif.cca(rda_GO) #VIF > 10 → remove
+
+# Não foi necessário remover
+# Modelo final
+rda_GO
+
+#9 variáveis de solo explicaram as variáveis da planta.
+# O conjunto de atributos do solo explica ≈ 20% da variação total das características da planta. Constrained = 1.2047  → 20.08% e Unconstrained = 4.7953 → 79.92% o solo, como conjunto, tem papel relevante na estruturação da variação da planta.
+
+# Eixos canônicos (RDA 1 e 2)  0.5572 + 0.4288 ≈ 82% da variação explicada pelo solo 
+
+#A Análise de Redundância indicou que o conjunto de atributos químicos do solo explicou 20,1% da variabilidade total das características da planta. Os dois primeiros eixos canônicos concentraram aproximadamente 82% da variação explicada, indicando que os principais gradientes ambientais associados ao solo estão representados nesses eixos.
+
+
+anova(rda_GO)            # modelo global - 
+# essa explicação não é maior do que o esperado ao acaso
+# há tendência / efeito moderado, mas sem significância global
+
+anova(rda_GO, by="term") # cada variável do solo
+# apenas o pH SMP apresentou efeito estatisticamente significativo sobre a variação multivariada dos atributos das plantas (F = 3,14; p = 0,009)
+
+# O fósforo apresentou efeito marginal (p = 0,078), sugerindo possível influência secundária, porém insuficiente para explicar de forma independente a estrutura dos dados. As demais variáveis do solo  não contribuíram significativamente para o modelo quando consideradas conjuntamente.
+
+# a resposta multivariada das plantas está associada principalmente ao gradiente de acidez potencial do solo
+
+anova(rda_GO, by="axis") # eixos
+
+# O teste de permutação aplicado aos eixos canônicos da RDA indica que nenhum dos eixos (RDA1–RDA6) é estatisticamente significativo (p > 0.05), apesar de os dois primeiros eixos apresentarem valores relativamente mais altos de variância explicada.
+
+# Isso significa que, quando todas as variáveis do solo são incluídas simultaneamente no modelo, a estrutura multivariada dos dados das plantas não é bem representada por eixos canônicos individuais
+
+
+```
+
+### Análise de Redundância (RDA) - Selvíria/MS
+
+
+```{r}
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Selvíria/MS") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+form_rda <- as.formula(
+  paste("scale(da_pad_planta) ~",
+        paste(names(da_pad_solo), collapse = " + "))
+)
+
+# Modelo Completo
+rda_MS <- rda(form_rda,
+              da_pad)
+
+# Correlação entre solo
+cor(da_pad_solo, use = "complete.obs") #|r| > 0.7 → não entram juntas
+cor(da_pad_solo, use = "complete.obs") |> 
+  corrplot()
+
+# Olhando a Multicolinearidade pelo VIF
+vif.cca(rda_MS) #VIF > 10 → remove
+
+# Não foi necessário remover
+# Modelo final
+rda_MS
+
+# 9 variáveis de solo explicaram as variáveis da planta.
+# O conjunto de atributos do solo explica ≈ 22% da variação total das características da planta. Inércia não constrangida: 78,35% o conjunto de variáveis do solo explica pouco da estrutura multivariada das plantas.
+
+# Eixos canônicos (RDA 1 e 2)  0.5693 + 0.2755 ≈ 84% da variação explicada pelo solo 
+
+#A Análise de Redundância indicou que o conjunto de atributos químicos do solo explicou 22% da variabilidade total das características da planta. Os dois primeiros eixos canônicos concentraram aproximadamente 84% da variação explicada, indicando que os principais gradientes ambientais associados ao solo estão representados nesses eixos.
+
+
+anova(rda_MS)            # modelo global - 
+# essa explicação não é maior do que o esperado ao acaso
+# há tendência / efeito moderado, mas sem significância global. A estrutura dos dados sugere que outros fatores (espaciais, genéticos, microambiente, histórico de manejo) são mais importantes do que os atributos químicos do solo.
+
+anova(rda_MS, by="term") # cada variável do solo
+# k_potacio é a única com tendência marginal.
+
+# A análise sequencial dos termos da RDA indicou que nenhuma variável do solo apresentou efeito significativo sobre a variação dos atributos das plantas (p > 0,05), embora o teor de potássio tenha apresentado efeito marginal (F = 2,12; p = 0,065). Os resultados sugerem que não há um único fator edáfico dominante estruturando a variação das plantas nesta localidade, com apenas uma influência fraca e não significativa do potássio.
+
+anova(rda_MS, by="axis") # eixos
+
+# O teste de permutação aplicado aos eixos canônicos da RDA indica que nenhum dos eixos (RDA1–RDA6) é estatisticamente significativo (p > 0.05), apesar de os dois primeiros eixos apresentarem valores relativamente mais altos de variância explicada.
+
+# Não há evidência de que as variáveis edáficas expliquem de forma consistente a variação multivariada dos atributos das plantas nesta localidade.
+
+
+```
+### Análise de Redundância (RDA) - Aparecida D'Oeste/SP
+
+
+```{r}
+da_pad<-decostand(data_set |> 
+              filter(populacao == "Aparecida D'Oeste/SP") |> 
+              select(hc_m:s_enxofre) |> 
+              mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+form_rda <- as.formula(
+  paste("scale(da_pad_planta) ~",
+        paste(names(da_pad_solo), collapse = " + "))
+)
+
+# Modelo Completo
+rda_SP <- rda(form_rda,
+              da_pad)
+
+# Correlação entre solo
+cor(da_pad_solo, use = "complete.obs") #|r| > 0.7 → não entram juntas
+cor(da_pad_solo, use = "complete.obs") |> 
+  corrplot()
+
+# Olhando a Multicolinearidade pelo VIF
+vif.cca(rda_SP) #VIF > 10 → remove
+
+# Não foi necessário remover
+# Modelo final
+rda_SP
+
+# 9 variáveis de solo explicaram as variáveis da planta.
+# O conjunto de atributos do solo explica ≈ 24% da variação total das características da planta. Inércia não constrangida: 75,66% o conjunto de variáveis do solo explica pouco da estrutura multivariada das plantas.
+
+# Eixos canônicos (RDA 1 e 2)   ≈ 77.5% da variação explicada pelo solo 
+
+#A Análise de Redundância indicou que o conjunto de atributos químicos do solo explicou 24% da variabilidade total das características da planta. Os dois primeiros eixos canônicos concentraram aproximadamente 77% da variação explicada, indicando que os principais gradientes ambientais associados ao solo estão representados nesses eixos.
+
+
+anova(rda_SP)            # modelo global - 
+# essa explicação não é maior do que o esperado ao acaso
+# há tendência / efeito moderado, mas sem significância global. A estrutura dos dados sugere que outros fatores (espaciais, genéticos, microambiente, histórico de manejo) são mais importantes do que os atributos químicos do solo.
+
+anova(rda_SP, by="term") # cada variável do solo
+# A variação multivariada dos atributos das plantas está associada principalmente ao gradiente de cálcio no solo.
+
+# A análise de redundância indicou que, entre as variáveis edáficas avaliadas, apenas o teor de cálcio apresentou efeito significativo sobre a variação multivariada dos atributos das plantas (p = 0,023). As demais variáveis não contribuíram significativamente para o modelo.
+
+anova(rda_SP, by="axis") # eixos
+
+# O teste de permutação aplicado aos eixos canônicos da RDA indica que nenhum dos eixos (RDA1–RDA6) é estatisticamente significativo (p > 0.05), apesar de os dois primeiros eixos apresentarem valores relativamente mais altos de variância explicada.
+
+# Não há evidência de que as variáveis edáficas expliquem de forma consistente a variação multivariada dos atributos das plantas nesta localidade.
+
+# o efeito do Ca existe, mas está disperso entre mais de um eixo e não forte o suficiente para tornar um eixo individualmente significativo.
+```
