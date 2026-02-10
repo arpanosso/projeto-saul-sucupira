@@ -31,8 +31,10 @@ Projeto Sucupira / Análise de Dados
 
 ``` r
 library(tidyverse)
+library(corrplot)
 library(spdep)
 library(gstat)
+library(vegan)
 library(sf)
 library(sp)
 source("R/my-functions.R")
@@ -974,4 +976,847 @@ ls_csv <- list.files("output/best-fit/",full.names = TRUE,pattern = ".csv")
 map_df(ls_csv, read_csv) |>
   arrange(pop,variavel) |> 
   writexl::write_xlsx("output/semivariogram-model.xlsx")
+```
+
+#### Cluster hierárquico (intra-população) - Lagoa Santa/GO
+
+``` r
+arv_matriz <- data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Lagoa Santa/GO") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+```
+
+##### Atributos do Solo
+
+``` r
+da_pad_euc<-vegdist(da_pad_solo,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+``` r
+grupo_solo<-cutree(da_pad_euc_ward,3)
+```
+
+##### Atributos da Planta
+
+``` r
+da_pad_euc<-vegdist(da_pad_planta,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+``` r
+grupo_planta<-cutree(da_pad_euc_ward,3)
+```
+
+##### Solo + Planta
+
+``` r
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+
+``` r
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+```
+
+### Comparação dos grupos Espaciais
+
+``` r
+df_aux <- data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  add_column(grupo_planta,grupo_solo,grupo_solo_planta)
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+  theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+
+``` r
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+    theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-24-2.png)<!-- -->
+
+``` r
+
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3"))+
+    theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-24-3.png)<!-- -->
+
+#### Cluster hierárquico (intra-população) - Selvíria/MS
+
+``` r
+arv_matriz <- data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Selvíria/MS") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+```
+
+##### Atributos do Solo
+
+``` r
+da_pad_euc<-vegdist(da_pad_solo,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
+
+``` r
+grupo_solo<-cutree(da_pad_euc_ward,3)
+```
+
+##### Atributos da Planta
+
+``` r
+da_pad_euc<-vegdist(da_pad_planta,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+``` r
+grupo_planta<-cutree(da_pad_euc_ward,3)
+```
+
+##### Solo + Planta
+
+``` r
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+
+``` r
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+```
+
+### Comparação dos grupos Espaciais
+
+``` r
+df_aux <- data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  add_column(grupo_planta,grupo_solo,grupo_solo_planta)
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+  theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+
+``` r
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+    theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-29-2.png)<!-- -->
+
+``` r
+
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3"))+
+    theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-29-3.png)<!-- -->
+
+#### Cluster hierárquico (intra-população) - Aparecida D’Oeste/SP
+
+``` r
+arv_matriz <- data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Aparecida D'Oeste/SP") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+```
+
+##### Atributos do Solo
+
+``` r
+da_pad_euc<-vegdist(da_pad_solo,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+
+``` r
+grupo_solo<-cutree(da_pad_euc_ward,3)
+```
+
+##### Atributos da Planta
+
+``` r
+da_pad_euc<-vegdist(da_pad_planta,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+
+``` r
+grupo_planta<-cutree(da_pad_euc_ward,3)
+```
+
+##### Solo + Planta
+
+``` r
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+
+``` r
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+```
+
+### Comparação dos grupos Espaciais
+
+``` r
+df_aux <- data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  add_column(grupo_planta,grupo_solo,grupo_solo_planta)
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+  theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+
+``` r
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+    theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-34-2.png)<!-- -->
+
+``` r
+
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3"))+
+    theme(
+    legend.position = "top"
+  )
+```
+
+![](README_files/figure-gfm/unnamed-chunk-34-3.png)<!-- --> \####
+Análise de Componentes Principais - Lagoa Santa/GO
+
+``` r
+arv_matriz <- data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Lagoa Santa/GO") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+print("======== Análise de Componentes Principais ========== ")
+#> [1] "======== Análise de Componentes Principais ========== "
+pca <-  prcomp(da_pad,scale.=TRUE)
+# Autovalores
+eig<-pca$sdev^2
+print("==== Autovalores ====")
+#> [1] "==== Autovalores ===="
+print(round(eig,3))
+#>  [1] 4.625 2.063 1.683 1.464 0.982 0.832 0.795 0.682 0.541 0.384 0.307 0.249
+#> [13] 0.168 0.126 0.100
+print("==== % da variância explicada ====")
+#> [1] "==== % da variância explicada ===="
+ve<-eig/sum(eig)
+print(round(ve,4))
+#>  [1] 0.3083 0.1376 0.1122 0.0976 0.0654 0.0554 0.0530 0.0454 0.0361 0.0256
+#> [11] 0.0204 0.0166 0.0112 0.0084 0.0067
+print("==== % da variância explicada acumulada ====")
+#> [1] "==== % da variância explicada acumulada ===="
+print(round(cumsum(ve),4)*100)
+#>  [1]  30.83  44.59  55.81  65.57  72.11  77.66  82.96  87.50  91.11  93.67
+#> [11]  95.71  97.37  98.49  99.33 100.00
+print("==== Poder Discriminante ====")
+#> [1] "==== Poder Discriminante ===="
+mcor<-cor(da_pad,pca$x)
+corrplot(mcor)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
+
+``` r
+print("==== screeplot ====")
+#> [1] "==== screeplot ===="
+screeplot(pca)
+abline(h=1)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-35-2.png)<!-- -->
+
+``` r
+pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+pc1c<-pca$x[,1]/sd(pca$x[,1])
+pc2c<-pca$x[,2]/sd(pca$x[,2])
+pc3c<-pca$x[,3]/sd(pca$x[,3])
+nv<-ncol(da_pad) # número de variáveis utilizadas na análise
+```
+
+``` r
+mc <- cor(da_pad)
+# gráfico biplot
+bip<-data.frame(pc1c,pc2c,pc3c,grupo_solo_planta)
+texto <- data.frame(
+  x = pc1V,
+  y = pc2V,
+  z = pc3V,
+  label = rownames(mc)
+)
+
+bi_plot <- bip |> 
+  ggplot(aes(x=pc1c,y=pc2c,color = as_factor(grupo_solo_planta)))+
+  geom_point(size = 1) + 
+  theme_minimal() +
+  # scale_shape_manual(values=16:18)+
+  scale_color_manual(values=c("#009E73", "#999999","#D55E00")) +
+  #annotate(geom="text", x=pc1V, y=pc2V, label=names(pc1V),
+  #            color="black",font=3)+
+  geom_vline(aes(xintercept=0),
+             color="black", size=1)+
+  geom_hline(aes(yintercept=0),
+             color="black", size=1)+
+  annotate(geom="segment",
+           x=rep(0,length(da_pad)),
+           xend=texto$x,
+           y=rep(0,length(da_pad)),
+           yend=texto$y,color="black",lwd=.5)+
+  geom_label(data=texto,aes(x=x,y=y,label=label),
+             color="black",angle=0,fontface="bold",size=4,fill="white")+
+  labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+       y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+       color="",shape="")+
+  theme(legend.position = "top") +
+  xlim(-3,3)
+bi_plot
+```
+
+![](README_files/figure-gfm/unnamed-chunk-37-1.png)<!-- -->
+
+``` r
+    print("==== Tabela da correlação dos atributos com cada PC ====")
+#> [1] "==== Tabela da correlação dos atributos com cada PC ===="
+    ck<-sum(pca$sdev^2>=0.98)
+    tabelapca<-vector()
+    for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+    colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+    pcat<-round(tabelapca,3)
+    tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+    print(tabelapca)
+#>                      PC1         PC2         PC3         PC4         PC5
+#> hc_m         -0.01344569  0.44286367  0.53530396  0.29194535 -0.44014251
+#> fruto         0.06085044 -0.34798963 -0.58093887  0.13905920 -0.38275152
+#> eca_cm       -0.10066259  0.39233425 -0.42981875 -0.33464190  0.24117623
+#> ht_m         -0.13186171  0.68016066  0.33813570  0.16840800 -0.22230191
+#> dap_cm       -0.14832370  0.63780357 -0.26126766 -0.27641817  0.02672020
+#> dmc_m        -0.18234817  0.69782498 -0.34007432 -0.01887608  0.10417714
+#> s_enxofre     0.34757526  0.24357547  0.12440234  0.40168504  0.58516262
+#> mat_organica  0.36236185  0.27941305 -0.35331883  0.62563413 -0.16095113
+#> p_h_smp      -0.56469153 -0.10218718 -0.57177554  0.42124400 -0.06223644
+#> p_fosforo    -0.63740594  0.17422652 -0.09972320 -0.41125925 -0.19818430
+#> al_aluminio   0.74971510 -0.03273123  0.03604982 -0.35381164 -0.23681332
+#> p_h          -0.81198068 -0.18384222  0.14597739  0.26576901  0.13951349
+#> k_potacio    -0.87302867  0.05823268 -0.07400288  0.04194003 -0.15564586
+#> ca_calcio    -0.87400216 -0.07758460  0.15915379 -0.18529329  0.02915358
+#> mg_magnesio  -0.90193109 -0.11518703  0.21348500  0.10568402  0.10068986
+```
+
+#### Análise de Componentes Principais - Selvíria/MS
+
+``` r
+arv_matriz <- data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Selvíria/MS") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+print("======== Análise de Componentes Principais ========== ")
+#> [1] "======== Análise de Componentes Principais ========== "
+pca <-  prcomp(da_pad,scale.=TRUE)
+# Autovalores
+eig<-pca$sdev^2
+print("==== Autovalores ====")
+#> [1] "==== Autovalores ===="
+print(round(eig,3))
+#>  [1] 5.135 2.018 1.594 1.190 1.101 0.934 0.794 0.666 0.490 0.334 0.287 0.187
+#> [13] 0.142 0.079 0.049
+print("==== % da variância explicada ====")
+#> [1] "==== % da variância explicada ===="
+ve<-eig/sum(eig)
+print(round(ve,4))
+#>  [1] 0.3423 0.1346 0.1063 0.0793 0.0734 0.0623 0.0529 0.0444 0.0326 0.0223
+#> [11] 0.0191 0.0124 0.0095 0.0052 0.0033
+print("==== % da variância explicada acumulada ====")
+#> [1] "==== % da variância explicada acumulada ===="
+print(round(cumsum(ve),4)*100)
+#>  [1]  34.23  47.69  58.32  66.25  73.59  79.82  85.12  89.56  92.82  95.05
+#> [11]  96.96  98.20  99.15  99.67 100.00
+print("==== Poder Discriminante ====")
+#> [1] "==== Poder Discriminante ===="
+mcor<-cor(da_pad,pca$x)
+corrplot(mcor)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-39-1.png)<!-- -->
+
+``` r
+print("==== screeplot ====")
+#> [1] "==== screeplot ===="
+screeplot(pca)
+abline(h=1)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-39-2.png)<!-- -->
+
+``` r
+pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+pc1c<-pca$x[,1]/sd(pca$x[,1])
+pc2c<-pca$x[,2]/sd(pca$x[,2])
+pc3c<-pca$x[,3]/sd(pca$x[,3])
+nv<-ncol(da_pad) # número de variáveis utilizadas na análise
+```
+
+``` r
+mc <- cor(da_pad)
+# gráfico biplot
+bip<-data.frame(pc1c,pc2c,pc3c,grupo_solo_planta)
+texto <- data.frame(
+  x = pc1V,
+  y = pc2V,
+  z = pc3V,
+  label = rownames(mc)
+)
+
+bi_plot <- bip |> 
+  ggplot(aes(x=pc1c,y=pc2c,color = as_factor(grupo_solo_planta)))+
+  geom_point(size = 1) + 
+  theme_minimal() +
+  # scale_shape_manual(values=16:18)+
+  scale_color_manual(values=c("#009E73", "#999999","#D55E00")) +
+  #annotate(geom="text", x=pc1V, y=pc2V, label=names(pc1V),
+  #            color="black",font=3)+
+  geom_vline(aes(xintercept=0),
+             color="black", size=1)+
+  geom_hline(aes(yintercept=0),
+             color="black", size=1)+
+  annotate(geom="segment",
+           x=rep(0,length(da_pad)),
+           xend=texto$x,
+           y=rep(0,length(da_pad)),
+           yend=texto$y,color="black",lwd=.5)+
+  geom_label(data=texto,aes(x=x,y=y,label=label),
+             color="black",angle=0,fontface="bold",size=4,fill="white")+
+  labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+       y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+       color="",shape="")+
+  theme(legend.position = "top") +
+  xlim(-3,3)
+bi_plot
+```
+
+![](README_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->
+
+``` r
+    print("==== Tabela da correlação dos atributos com cada PC ====")
+#> [1] "==== Tabela da correlação dos atributos com cada PC ===="
+    ck<-sum(pca$sdev^2>=0.98)
+    tabelapca<-vector()
+    for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+    colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+    pcat<-round(tabelapca,3)
+    tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+    print(tabelapca)
+#>                      PC1         PC2         PC3         PC4         PC5
+#> dap_cm       -0.03720212 -0.49286413 -0.23685276 -0.22329512 -0.37377643
+#> eca_cm        0.04465574 -0.08500643 -0.39197125  0.22387101 -0.73985780
+#> p_fosforo     0.06177373 -0.62844958  0.34216040  0.27125757 -0.20569414
+#> fruto         0.13276278 -0.59781621 -0.29609027  0.18386976  0.46149381
+#> hc_m         -0.14590026  0.47967475 -0.53030914  0.49788401 -0.03706777
+#> dmc_m        -0.20917910 -0.62469872 -0.34444468 -0.43405096  0.07382397
+#> ht_m         -0.36877853 -0.12800766 -0.70660970 -0.04284303  0.18611551
+#> p_h_smp      -0.56947750  0.32902202 -0.32852060 -0.10466256 -0.08081050
+#> s_enxofre     0.68423802  0.12466707  0.08523328 -0.43627576 -0.25834767
+#> al_aluminio   0.68816003 -0.25804327  0.01613440  0.41600038  0.08667470
+#> p_h          -0.73511263  0.28466852  0.16601845 -0.10631870  0.10230079
+#> mat_organica  0.74062915  0.25338315 -0.30494275 -0.36400088  0.13170398
+#> k_potacio    -0.91329478 -0.14672868  0.02179283  0.09215148  0.01964008
+#> mg_magnesio  -0.92330925 -0.03040635  0.12212412 -0.13132498 -0.08173184
+#> ca_calcio    -0.93151443 -0.14483658  0.17079114 -0.01455222 -0.04345424
+```
+
+#### Análise de Componentes Principais - Aparecida D’Oeste/SP
+
+``` r
+arv_matriz <- data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Aparecida D'Oeste/SP") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+print("======== Análise de Componentes Principais ========== ")
+#> [1] "======== Análise de Componentes Principais ========== "
+pca <-  prcomp(da_pad,scale.=TRUE)
+# Autovalores
+eig<-pca$sdev^2
+print("==== Autovalores ====")
+#> [1] "==== Autovalores ===="
+print(round(eig,3))
+#>  [1] 4.008 2.181 1.813 1.480 1.248 1.038 0.905 0.667 0.551 0.362 0.301 0.170
+#> [13] 0.152 0.074 0.050
+print("==== % da variância explicada ====")
+#> [1] "==== % da variância explicada ===="
+ve<-eig/sum(eig)
+print(round(ve,4))
+#>  [1] 0.2672 0.1454 0.1208 0.0986 0.0832 0.0692 0.0603 0.0445 0.0367 0.0241
+#> [11] 0.0200 0.0114 0.0102 0.0049 0.0033
+print("==== % da variância explicada acumulada ====")
+#> [1] "==== % da variância explicada acumulada ===="
+print(round(cumsum(ve),4)*100)
+#>  [1]  26.72  41.26  53.34  63.21  71.53  78.45  84.48  88.93  92.60  95.01
+#> [11]  97.02  98.15  99.17  99.67 100.00
+print("==== Poder Discriminante ====")
+#> [1] "==== Poder Discriminante ===="
+mcor<-cor(da_pad,pca$x)
+corrplot(mcor)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-43-1.png)<!-- -->
+
+``` r
+print("==== screeplot ====")
+#> [1] "==== screeplot ===="
+screeplot(pca)
+abline(h=1)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-43-2.png)<!-- -->
+
+``` r
+pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+pc1c<-pca$x[,1]/sd(pca$x[,1])
+pc2c<-pca$x[,2]/sd(pca$x[,2])
+pc3c<-pca$x[,3]/sd(pca$x[,3])
+nv<-ncol(da_pad) # número de variáveis utilizadas na análise
+```
+
+``` r
+mc <- cor(da_pad)
+# gráfico biplot
+bip<-data.frame(pc1c,pc2c,pc3c,grupo_solo_planta)
+texto <- data.frame(
+  x = pc1V,
+  y = pc2V,
+  z = pc3V,
+  label = rownames(mc)
+)
+
+bi_plot <- bip |> 
+  ggplot(aes(x=pc1c,y=pc2c,color = as_factor(grupo_solo_planta)))+
+  geom_point(size = 1) + 
+  theme_minimal() +
+  # scale_shape_manual(values=16:18)+
+  scale_color_manual(values=c("#009E73", "#999999","#D55E00")) +
+  #annotate(geom="text", x=pc1V, y=pc2V, label=names(pc1V),
+  #            color="black",font=3)+
+  geom_vline(aes(xintercept=0),
+             color="black", size=1)+
+  geom_hline(aes(yintercept=0),
+             color="black", size=1)+
+  annotate(geom="segment",
+           x=rep(0,length(da_pad)),
+           xend=texto$x,
+           y=rep(0,length(da_pad)),
+           yend=texto$y,color="black",lwd=.5)+
+  geom_label(data=texto,aes(x=x,y=y,label=label),
+             color="black",angle=0,fontface="bold",size=4,fill="white")+
+  labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+       y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+       color="",shape="")+
+  theme(legend.position = "top") +
+  xlim(-3,3)
+bi_plot
+```
+
+![](README_files/figure-gfm/unnamed-chunk-45-1.png)<!-- -->
+
+``` r
+    print("==== Tabela da correlação dos atributos com cada PC ====")
+#> [1] "==== Tabela da correlação dos atributos com cada PC ===="
+    ck<-sum(pca$sdev^2>=0.98)
+    tabelapca<-vector()
+    for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+    colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+    pcat<-round(tabelapca,3)
+    tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+    print(tabelapca)
+#>                       PC1         PC2          PC3          PC4         PC5
+#> hc_m         -0.007701919  0.33140530  0.292005126 -0.692417578  0.31039452
+#> dmc_m        -0.099490427  0.06213369 -0.046413383  0.719174185  0.29750295
+#> s_enxofre    -0.104315535 -0.66982496  0.104510361 -0.298377276  0.27324817
+#> p_fosforo     0.130469980 -0.38369564 -0.423703268 -0.313271306  0.46796367
+#> eca_cm        0.156637261 -0.29488829 -0.564685702  0.062957614 -0.09982151
+#> fruto         0.165347176  0.02153140 -0.228286183  0.387992630  0.69465976
+#> dap_cm       -0.181111005  0.34502710  0.450054022  0.191981868 -0.03110640
+#> mat_organica -0.250494351 -0.57523699  0.571463217  0.274808905 -0.02104698
+#> ht_m         -0.274131751  0.62102169  0.153597094 -0.012506628  0.45509587
+#> k_potacio     0.441435243  0.63949427 -0.009255651  0.003441361 -0.04150786
+#> p_h_smp       0.741954491 -0.32333303  0.509223485  0.135572306  0.06165233
+#> al_aluminio  -0.826955684  0.08538641 -0.360629913  0.084417459 -0.19879671
+#> ca_calcio     0.870214128  0.08510161 -0.315365438  0.040814381 -0.05872738
+#> p_h           0.877842107 -0.04992832  0.279665014 -0.002029451 -0.00122782
+#> mg_magnesio   0.889141672  0.13290896 -0.209472802  0.040596379 -0.14122471
+#>                       PC6
+#> hc_m         -0.245125728
+#> dmc_m        -0.153658747
+#> s_enxofre     0.090748601
+#> p_fosforo    -0.171068948
+#> eca_cm       -0.641855791
+#> fruto         0.193900434
+#> dap_cm       -0.645468823
+#> mat_organica -0.013888397
+#> ht_m         -0.038888030
+#> k_potacio     0.195387354
+#> p_h_smp      -0.003418716
+#> al_aluminio   0.096134856
+#> ca_calcio    -0.033475324
+#> p_h          -0.018629376
+#> mg_magnesio  -0.007516970
 ```

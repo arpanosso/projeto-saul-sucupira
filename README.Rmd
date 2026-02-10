@@ -43,8 +43,10 @@ knitr::opts_chunk$set(
 
 ```{r}
 library(tidyverse)
+library(corrplot)
 library(spdep)
 library(gstat)
+library(vegan)
 library(sf)
 library(sp)
 source("R/my-functions.R")
@@ -347,5 +349,658 @@ ls_csv <- list.files("output/best-fit/",full.names = TRUE,pattern = ".csv")
 map_df(ls_csv, read_csv) |>
   arrange(pop,variavel) |> 
   writexl::write_xlsx("output/semivariogram-model.xlsx")
+```
+
+#### Cluster hierárquico (intra-população) - Lagoa Santa/GO
+
+
+
+```{r}
+arv_matriz <- data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Lagoa Santa/GO") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+```
+
+
+##### Atributos do Solo
+
+```{r}
+da_pad_euc<-vegdist(da_pad_solo,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_solo<-cutree(da_pad_euc_ward,3)
+```
+
+
+##### Atributos da Planta
+
+```{r}
+da_pad_euc<-vegdist(da_pad_planta,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_planta<-cutree(da_pad_euc_ward,3)
+```
+
+
+##### Solo + Planta
+
+```{r}
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+```
+### Comparação dos grupos Espaciais
+
+```{r}
+df_aux <- data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  add_column(grupo_planta,grupo_solo,grupo_solo_planta)
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+  theme(
+    legend.position = "top"
+  )
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+    theme(
+    legend.position = "top"
+  )
+
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3"))+
+    theme(
+    legend.position = "top"
+  )
+
+```
+
+
+#### Cluster hierárquico (intra-população) - Selvíria/MS
+
+
+
+```{r}
+arv_matriz <- data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Selvíria/MS") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+```
+
+
+##### Atributos do Solo
+
+```{r}
+da_pad_euc<-vegdist(da_pad_solo,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_solo<-cutree(da_pad_euc_ward,3)
+```
+
+
+##### Atributos da Planta
+
+```{r}
+da_pad_euc<-vegdist(da_pad_planta,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_planta<-cutree(da_pad_euc_ward,3)
+```
+
+
+##### Solo + Planta
+
+```{r}
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+```
+### Comparação dos grupos Espaciais
+
+```{r}
+df_aux <- data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  add_column(grupo_planta,grupo_solo,grupo_solo_planta)
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+  theme(
+    legend.position = "top"
+  )
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+    theme(
+    legend.position = "top"
+  )
+
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3"))+
+    theme(
+    legend.position = "top"
+  )
+
+```
+
+#### Cluster hierárquico (intra-população) - Aparecida D'Oeste/SP
+
+
+
+```{r}
+arv_matriz <- data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Aparecida D'Oeste/SP") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_solo <- da_pad |> select(mat_organica:s_enxofre)
+da_pad_planta <- da_pad |> select(-(mat_organica:s_enxofre)) 
+```
+
+
+##### Atributos do Solo
+
+```{r}
+da_pad_euc<-vegdist(da_pad_solo,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_solo<-cutree(da_pad_euc_ward,3)
+```
+
+
+##### Atributos da Planta
+
+```{r}
+da_pad_euc<-vegdist(da_pad_planta,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_planta<-cutree(da_pad_euc_ward,3)
+```
+
+
+##### Solo + Planta
+
+```{r}
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+plot(da_pad_euc_ward,
+     ylab = "Distância Euclidiana",
+     xlab = "Municípios",
+     main = "",
+     hang = -1,
+     col = "black",
+     lwd = 1.5,
+     cex = .75,
+     las = 1,
+     axes = FALSE)
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+```
+### Comparação dos grupos Espaciais
+
+```{r}
+df_aux <- data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  add_column(grupo_planta,grupo_solo,grupo_solo_planta)
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+  theme(
+    legend.position = "top"
+  )
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3")) +
+    theme(
+    legend.position = "top"
+  )
+
+
+df_aux |> 
+  ggplot(aes(longitude, latitude,colour = as_factor(grupo_solo_planta))) +
+  geom_point(size=2) +
+  theme_bw() + 
+  labs(color = "Grupo-Solo-Planta") +
+  scale_color_manual(values = c("#1B9E77","#D95F02","#7570B3"))+
+    theme(
+    legend.position = "top"
+  )
+
+```
+#### Análise de Componentes Principais - Lagoa Santa/GO
+
+```{r}
+arv_matriz <- data_set |> 
+  filter(populacao == "Lagoa Santa/GO") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Lagoa Santa/GO") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+print("======== Análise de Componentes Principais ========== ")
+pca <-  prcomp(da_pad,scale.=TRUE)
+# Autovalores
+eig<-pca$sdev^2
+print("==== Autovalores ====")
+print(round(eig,3))
+print("==== % da variância explicada ====")
+ve<-eig/sum(eig)
+print(round(ve,4))
+print("==== % da variância explicada acumulada ====")
+print(round(cumsum(ve),4)*100)
+print("==== Poder Discriminante ====")
+mcor<-cor(da_pad,pca$x)
+corrplot(mcor)
+print("==== screeplot ====")
+screeplot(pca)
+abline(h=1)
+```
+
+```{r}
+pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+pc1c<-pca$x[,1]/sd(pca$x[,1])
+pc2c<-pca$x[,2]/sd(pca$x[,2])
+pc3c<-pca$x[,3]/sd(pca$x[,3])
+nv<-ncol(da_pad) # número de variáveis utilizadas na análise
+```
+
+```{r}
+mc <- cor(da_pad)
+# gráfico biplot
+bip<-data.frame(pc1c,pc2c,pc3c,grupo_solo_planta)
+texto <- data.frame(
+  x = pc1V,
+  y = pc2V,
+  z = pc3V,
+  label = rownames(mc)
+)
+
+bi_plot <- bip |> 
+  ggplot(aes(x=pc1c,y=pc2c,color = as_factor(grupo_solo_planta)))+
+  geom_point(size = 1) + 
+  theme_minimal() +
+  # scale_shape_manual(values=16:18)+
+  scale_color_manual(values=c("#009E73", "#999999","#D55E00")) +
+  #annotate(geom="text", x=pc1V, y=pc2V, label=names(pc1V),
+  #            color="black",font=3)+
+  geom_vline(aes(xintercept=0),
+             color="black", size=1)+
+  geom_hline(aes(yintercept=0),
+             color="black", size=1)+
+  annotate(geom="segment",
+           x=rep(0,length(da_pad)),
+           xend=texto$x,
+           y=rep(0,length(da_pad)),
+           yend=texto$y,color="black",lwd=.5)+
+  geom_label(data=texto,aes(x=x,y=y,label=label),
+             color="black",angle=0,fontface="bold",size=4,fill="white")+
+  labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+       y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+       color="",shape="")+
+  theme(legend.position = "top") +
+  xlim(-3,3)
+bi_plot
+```
+
+
+```{r}
+    print("==== Tabela da correlação dos atributos com cada PC ====")
+    ck<-sum(pca$sdev^2>=0.98)
+    tabelapca<-vector()
+    for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+    colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+    pcat<-round(tabelapca,3)
+    tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+    print(tabelapca)
+
+```
+
+#### Análise de Componentes Principais - Selvíria/MS
+
+```{r}
+arv_matriz <- data_set |> 
+  filter(populacao == "Selvíria/MS") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Selvíria/MS") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+print("======== Análise de Componentes Principais ========== ")
+pca <-  prcomp(da_pad,scale.=TRUE)
+# Autovalores
+eig<-pca$sdev^2
+print("==== Autovalores ====")
+print(round(eig,3))
+print("==== % da variância explicada ====")
+ve<-eig/sum(eig)
+print(round(ve,4))
+print("==== % da variância explicada acumulada ====")
+print(round(cumsum(ve),4)*100)
+print("==== Poder Discriminante ====")
+mcor<-cor(da_pad,pca$x)
+corrplot(mcor)
+print("==== screeplot ====")
+screeplot(pca)
+abline(h=1)
+```
+
+```{r}
+pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+pc1c<-pca$x[,1]/sd(pca$x[,1])
+pc2c<-pca$x[,2]/sd(pca$x[,2])
+pc3c<-pca$x[,3]/sd(pca$x[,3])
+nv<-ncol(da_pad) # número de variáveis utilizadas na análise
+```
+
+```{r}
+mc <- cor(da_pad)
+# gráfico biplot
+bip<-data.frame(pc1c,pc2c,pc3c,grupo_solo_planta)
+texto <- data.frame(
+  x = pc1V,
+  y = pc2V,
+  z = pc3V,
+  label = rownames(mc)
+)
+
+bi_plot <- bip |> 
+  ggplot(aes(x=pc1c,y=pc2c,color = as_factor(grupo_solo_planta)))+
+  geom_point(size = 1) + 
+  theme_minimal() +
+  # scale_shape_manual(values=16:18)+
+  scale_color_manual(values=c("#009E73", "#999999","#D55E00")) +
+  #annotate(geom="text", x=pc1V, y=pc2V, label=names(pc1V),
+  #            color="black",font=3)+
+  geom_vline(aes(xintercept=0),
+             color="black", size=1)+
+  geom_hline(aes(yintercept=0),
+             color="black", size=1)+
+  annotate(geom="segment",
+           x=rep(0,length(da_pad)),
+           xend=texto$x,
+           y=rep(0,length(da_pad)),
+           yend=texto$y,color="black",lwd=.5)+
+  geom_label(data=texto,aes(x=x,y=y,label=label),
+             color="black",angle=0,fontface="bold",size=4,fill="white")+
+  labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+       y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+       color="",shape="")+
+  theme(legend.position = "top") +
+  xlim(-3,3)
+bi_plot
+```
+
+```{r}
+    print("==== Tabela da correlação dos atributos com cada PC ====")
+    ck<-sum(pca$sdev^2>=0.98)
+    tabelapca<-vector()
+    for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+    colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+    pcat<-round(tabelapca,3)
+    tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+    print(tabelapca)
+
+```
+
+#### Análise de Componentes Principais - Aparecida D'Oeste/SP
+
+```{r}
+arv_matriz <- data_set |> 
+  filter(populacao == "Aparecida D'Oeste/SP") |> 
+  pull(arv_matriz)
+da_pad<-decostand(data_set |> 
+                    filter(populacao == "Aparecida D'Oeste/SP") |> 
+                    select(hc_m:s_enxofre) |> 
+                    mutate(
+                      eca_cm = ifelse(is.na(eca_cm),mean(eca_cm,na.rm=TRUE),eca_cm),
+                      fruto = ifelse(is.na(fruto),mean(eca_cm,na.rm=TRUE),fruto)
+                    ), 
+                  method = "standardize",
+                  na.rm=TRUE)
+da_pad_euc<-vegdist(da_pad,"euclidean") 
+da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+da_pad_euc_ward$labels <- arv_matriz
+grupo_solo_planta <- cutree(da_pad_euc_ward,3)
+print("======== Análise de Componentes Principais ========== ")
+pca <-  prcomp(da_pad,scale.=TRUE)
+# Autovalores
+eig<-pca$sdev^2
+print("==== Autovalores ====")
+print(round(eig,3))
+print("==== % da variância explicada ====")
+ve<-eig/sum(eig)
+print(round(ve,4))
+print("==== % da variância explicada acumulada ====")
+print(round(cumsum(ve),4)*100)
+print("==== Poder Discriminante ====")
+mcor<-cor(da_pad,pca$x)
+corrplot(mcor)
+print("==== screeplot ====")
+screeplot(pca)
+abline(h=1)
+```
+
+```{r}
+pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+pc1c<-pca$x[,1]/sd(pca$x[,1])
+pc2c<-pca$x[,2]/sd(pca$x[,2])
+pc3c<-pca$x[,3]/sd(pca$x[,3])
+nv<-ncol(da_pad) # número de variáveis utilizadas na análise
+```
+
+```{r}
+mc <- cor(da_pad)
+# gráfico biplot
+bip<-data.frame(pc1c,pc2c,pc3c,grupo_solo_planta)
+texto <- data.frame(
+  x = pc1V,
+  y = pc2V,
+  z = pc3V,
+  label = rownames(mc)
+)
+
+bi_plot <- bip |> 
+  ggplot(aes(x=pc1c,y=pc2c,color = as_factor(grupo_solo_planta)))+
+  geom_point(size = 1) + 
+  theme_minimal() +
+  # scale_shape_manual(values=16:18)+
+  scale_color_manual(values=c("#009E73", "#999999","#D55E00")) +
+  #annotate(geom="text", x=pc1V, y=pc2V, label=names(pc1V),
+  #            color="black",font=3)+
+  geom_vline(aes(xintercept=0),
+             color="black", size=1)+
+  geom_hline(aes(yintercept=0),
+             color="black", size=1)+
+  annotate(geom="segment",
+           x=rep(0,length(da_pad)),
+           xend=texto$x,
+           y=rep(0,length(da_pad)),
+           yend=texto$y,color="black",lwd=.5)+
+  geom_label(data=texto,aes(x=x,y=y,label=label),
+             color="black",angle=0,fontface="bold",size=4,fill="white")+
+  labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+       y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+       color="",shape="")+
+  theme(legend.position = "top") +
+  xlim(-3,3)
+bi_plot
+```
+
+
+```{r}
+    print("==== Tabela da correlação dos atributos com cada PC ====")
+    ck<-sum(pca$sdev^2>=0.98)
+    tabelapca<-vector()
+    for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+    colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+    pcat<-round(tabelapca,3)
+    tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+    print(tabelapca)
+
 ```
 
